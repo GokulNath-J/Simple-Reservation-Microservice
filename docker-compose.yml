@@ -1,0 +1,81 @@
+version: "3.8"
+services:
+  Config-client:
+    container_name: config-client
+    image: reservation-config-client:v3.0
+    ports:
+      - "8888:8888"
+    networks:
+      - reservation-network
+
+  eurekaserver:
+    container_name: eureka-server
+    image: eureka-server:v1.0
+    ports:
+      - "8761:8761"
+    environment:
+      - eureka.instance.hostname=eurekaserver
+      - eureka.client.register-with-eureka=false
+      - eureka.client.fetch-registry=false
+      - eureka.client.service-url.defaultZone=http://eurekaserver:8761/eureka/
+    depends_on:
+      - Config-client
+    networks:
+      - reservation-network
+
+  Gateway:
+    container_name: gateway
+    image: gateway:v2.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - Config-client
+    networks:
+      - reservation-network
+
+  Indian-railway:
+    container_name: indian-railways
+    image: indian-railway:v2.0
+    ports:
+      - "8881:8881"
+    depends_on:
+      - Config-client
+      - eurekaserver
+      - mysql
+    networks:
+      - reservation-network
+
+  Passenger-service:
+    container_name: passenger-reservation
+    image: passenger-reservation:v2.0
+    ports:
+      - "8882:8882"
+    depends_on:
+      - Config-client
+      - eurekaserver
+      - mysql
+    networks:
+      - reservation-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: reservation
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: Gokul@03
+    volumes:
+      - mysql_data:/var/lib/mysql    # Mount existing data directory
+    ports:
+      - "3307:3306"  # Expose MySQL port
+    networks:
+      - reservation-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  reservation-network:
+    driver: bridge
